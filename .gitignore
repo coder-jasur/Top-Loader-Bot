@@ -64,5 +64,3 @@ venv.bak/
 .vscode
 .env
 *.log
-
-cookies.txt

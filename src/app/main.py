@@ -14,10 +14,11 @@ from src.app.common.bot_commands import bot_commands
 from src.app.common.db_url import construct_postgresql_url
 from src.app.core.config import Settings
 from src.app.database.tables import create_database_tables
+from src.app.common.database_backup import daily_database_sender
 from src.app.dialogs import register_all_dialogs
 from src.app.handlers import register_all_router
 from src.app.middleware import register_middleware
-from src.app.requirements_updater import requirements_updater
+from src.app.common.requirements_updater import requirements_updater
 
 logger = logging.getLogger(__name__)
 
@@ -49,9 +50,12 @@ async def main():
 
     register_middleware(dp, settings, pool)
 
-    # session = AiohttpSession(api=TelegramAPIServer.from_base(settings.tg_api_server_url))
+    session = AiohttpSession(api=TelegramAPIServer.from_base(settings.tg_api_server_url))
 
-    bot = Bot(token=settings.bot_token)#, session=session, default=DefaultBotProperties(parse_mode="HTML"))
+    bot = Bot(token=settings.bot_token, session=session, default=DefaultBotProperties(parse_mode="HTML"))
+
+    asyncio.create_task(daily_database_sender(bot, settings.admins_ids, settings.db_name))
+    asyncio.create_task(requirements_updater())
 
     await bot_commands(bot, settings)
 
@@ -67,12 +71,7 @@ if __name__ == "__main__":
         os.makedirs("media/audios", exist_ok=True)
         os.makedirs("media/photos", exist_ok=True)
 
-        async def runner():
-            task_bot = asyncio.create_task(main())
-            task_updater = asyncio.create_task(requirements_updater())
-            await asyncio.gather(task_bot, task_updater)
-
-        asyncio.run(runner())
+        asyncio.run(main())
 
     except Exception as e:
         logger.exception(e)

@@ -37,7 +37,7 @@ async def daily_database_sender(bot: Bot, chat_ids: list[int], pool: asyncpg.Poo
 
             async with aiofiles.open("all_users.txt", "w", encoding="utf-8") as f:
                 for user in all_users:
-                    await f.write(f"{user}\n")
+                    await f.write(f"{user[0]}\n")
 
             now = datetime.datetime.now()
             target_time = now.replace(hour=0, minute=0, second=0, microsecond=0)

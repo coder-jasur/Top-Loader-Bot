@@ -8,6 +8,7 @@ from typing import Optional, Tuple, List
 
 import aiofiles
 from instagrapi import Client
+from instagrapi.exceptions import LoginRequired
 from instaloader import instaloader
 from yt_dlp import YoutubeDL
 
@@ -158,20 +159,17 @@ class InstagramDownloaders:
             )
 
             story = await asyncio.to_thread(self.client.story_info, story_pk)
-            media_type = story.media_type  # 1=photo, 2=video
+            media_type = story.media_type
 
-            # Papka tanlash
-            if media_type == 1:  # PHOTO
+            if media_type == 1:
                 save_dir = Path("./media/photos/")
                 file_name = get_photo_file_name()
-            else:  # VIDEO
+            else:
                 save_dir = Path("./media/videos/")
                 file_name = get_video_file_name()
 
-            # Papkani yaratish
             await asyncio.to_thread(save_dir.mkdir, parents=True, exist_ok=True)
 
-            # Yuklash
             story_path = await asyncio.wait_for(
                 asyncio.to_thread(
                     self.client.story_download,
@@ -182,13 +180,11 @@ class InstagramDownloaders:
                 timeout=self.timeout
             )
 
-            # Yuklanmagan bo‘lsa
             if not story_path or not await asyncio.to_thread(os.path.exists, story_path):
                 errors.append(DownloadError.DOWNLOAD_ERROR)
                 print("❌ Story file not found")
                 return None, errors
 
-            # Fayl o‘lchami
             file_size = await asyncio.to_thread(os.path.getsize, story_path)
             print(f"✅ Story downloaded ({'PHOTO' if media_type == 1 else 'VIDEO'}) → {file_size / (1024 ** 2):.2f}MB")
 
@@ -207,6 +203,7 @@ class InstagramDownloaders:
             print(f"ERROR: {e}")
             errors.append(DownloadError.DOWNLOAD_ERROR)
             return None, errors
+
 
     def _extract_shortcode(self, url: str) -> str:
         m = re.search(r"/(?:p|reel)/([^/?]+)", url)
@@ -234,7 +231,7 @@ class InstagramDownloaders:
 
                     print(f"📥 Fetching post nodes...")
 
-                    # Get sidecar nodes - returns a GENERATOR
+
                     sidecar_nodes_generator = await asyncio.wait_for(
                         asyncio.to_thread(post.get_sidecar_nodes),
                         timeout=self.timeout
@@ -391,7 +388,6 @@ class InstagramDownloaders:
         failed_items = []
 
         try:
-            print(f"📥 Starting highlight download: {highlight_url}")
 
             try:
                 highlight_pk = await asyncio.wait_for(
@@ -403,11 +399,10 @@ class InstagramDownloaders:
                 )
                 print(f"✅ Got highlight PK: {highlight_pk}")
             except asyncio.TimeoutError:
-                print("❌ Timeout getting highlight PK")
                 errors.append(DownloadError.DOWNLOAD_ERROR)
                 return None, errors
             except Exception as e:
-                print(f"❌ Error getting highlight PK: {e}")
+                print(f"ERROR: {e}")
                 errors.append(DownloadError.DOWNLOAD_ERROR)
                 return None, errors
 
@@ -420,13 +415,11 @@ class InstagramDownloaders:
                     ),
                     timeout=self.timeout
                 )
-                print(f"✅ Got highlight info with {len(info.items)} items")
             except asyncio.TimeoutError:
-                print("❌ Timeout getting highlight info")
                 errors.append(DownloadError.DOWNLOAD_ERROR)
                 return None, errors
             except Exception as e:
-                print(f"❌ Error getting highlight info: {e}")
+                print(f"ERROR: {e}")
                 errors.append(DownloadError.DOWNLOAD_ERROR)
                 return None, errors
 
@@ -436,15 +429,12 @@ class InstagramDownloaders:
                 return None, errors
 
             total_items = len(info.items)
-            print(f"📊 Total items to download: {total_items}")
 
             for item_idx, item in enumerate(info.items):
-                print(f"📥 Processing item {item_idx + 1}/{total_items}...")
 
                 path = await self._download_single_highlight_item(
                     item=item,
-                    item_idx=item_idx,
-                    total_items=total_items
+
                 )
 
                 if path:
@@ -457,31 +447,28 @@ class InstagramDownloaders:
                 if item_idx < total_items - 1:
                     await asyncio.sleep(self.delay_between_items)
 
-            if failed_items:
-                print(f"⚠️ Failed items: {failed_items}")
 
             if not paths:
                 errors.append(DownloadError.DOWNLOAD_ERROR)
                 return None, errors
 
             return paths, errors
-
+        except LoginRequired:
+            errors.append(DownloadError.LOGIN_REQUIRED)
         except Exception as e:
-            print(f"❌ Highlight download error: {e}")
+
+            print(f"ERROR: {e}")
             errors.append(DownloadError.DOWNLOAD_ERROR)
             return None, errors
 
     async def _download_single_highlight_item(
             self,
             item,
-            item_idx: int,
-            total_items: int
     ) -> Optional[str]:
 
         for attempt in range(self.max_retries):
             try:
                 is_video = item.media_type != 1
-                media_type_str = "video" if is_video else "photo"
 
                 folder_path = Path("./media/videos" if is_video else "./media/photos")
 
@@ -492,10 +479,9 @@ class InstagramDownloaders:
                         exist_ok=True
                     )
                 except Exception as e:
-                    print(f"❌ Item {item_idx + 1}: Can't create folder: {e}")
+                    print(f"ERROR: {e}")
                     return None
 
-                print(f"📥 Item {item_idx + 1}/{total_items}: Downloading {media_type_str}...")
 
                 try:
                     if is_video:
@@ -518,59 +504,46 @@ class InstagramDownloaders:
                         )
 
                 except asyncio.TimeoutError:
-                    print(f"⏱️ Item {item_idx + 1}: Timeout (attempt {attempt + 1}/{self.max_retries})")
                     if attempt < self.max_retries - 1:
                         wait_time = 2 ** attempt
-                        print(f"⏳ Waiting {wait_time}s before retry...")
                         await asyncio.sleep(wait_time)
                     continue
 
                 if path is None:
-                    print(f"⚠️ Item {item_idx + 1}: Download returned None")
                     if attempt < self.max_retries - 1:
                         await asyncio.sleep(2 ** attempt)
                     continue
 
                 file_exists = await asyncio.to_thread(os.path.exists, path)
                 if not file_exists:
-                    print(f"⚠️ Item {item_idx + 1}: File doesn't exist: {path}")
                     if attempt < self.max_retries - 1:
                         await asyncio.sleep(2 ** attempt)
                     continue
 
                 try:
                     file_size = await asyncio.to_thread(os.path.getsize, path)
-                    file_size_mb = file_size / (1024 ** 2)
-                    file_size_gb = file_size / (1024 ** 3)
-
                     if file_size == 0:
-                        print(f"⚠️ Item {item_idx + 1}: File is empty (0 bytes)")
                         if attempt < self.max_retries - 1:
                             await asyncio.sleep(2 ** attempt)
                         continue
 
                     if file_size > 2000 * 1024 * 1024:
-                        print(f"❌ Item {item_idx + 1}: File too large: {file_size_gb:.2f}GB (max 2GB)")
                         return None
 
-                    print(f"✅ Item {item_idx + 1}: Downloaded {file_size_mb:.2f}MB")
                     return path
 
                 except Exception as e:
-                    print(f"⚠️ Item {item_idx + 1}: Error checking file size: {e}")
+                    print(f"ERROR: {e}")
                     if attempt < self.max_retries - 1:
                         await asyncio.sleep(2 ** attempt)
                     continue
 
             except Exception as e:
-                print(f"❌ Item {item_idx + 1}: Download error (attempt {attempt + 1}/{self.max_retries}): {e}")
                 if attempt < self.max_retries - 1:
                     wait_time = 2 ** attempt
-                    print(f"⏳ Waiting {wait_time}s before retry...")
                     await asyncio.sleep(wait_time)
                 continue
 
-        print(f"❌ Item {item_idx + 1}: Failed after {self.max_retries} attempts")
         return None
 
     async def instagram_profil_photo_downloader(

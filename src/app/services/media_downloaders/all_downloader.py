@@ -1,5 +1,6 @@
 import asyncio
 import os.path
+from typing import Optional, Union
 
 from aiogram.types import Message
 
@@ -27,46 +28,56 @@ class AllDownloader:
         self.tiktok_downloader = TikTokDownloaders()
         self.music_downloader = MusicDownloader()
         self.search = YouTubeSearcher()
-        self.auido_utils = AudioUtils()
+        self.audio_utils = AudioUtils()
         self._ = get_translator(lang).gettext
 
-    async def instagram_downloaders(self, url: str, media_type: InstagramMediaType):
-        await self.instagram_downloader.login(False)  # ✅ Login har doim ishlasin
+    async def instagram_downloaders(
+            self,
+            url: str,
+            media_type: InstagramMediaType
+    ) -> Optional[Union[str, list[dict]]]:
 
-        file_path = None
         errors = []
+        file_path = None
 
-        downloader_map = {
-            InstagramMediaType.REELS: self.instagram_downloader.instagram_reels_downloader,
-            InstagramMediaType.POST: self.instagram_downloader.instagram_post_downloader,
-            InstagramMediaType.STORIES: self.instagram_downloader.instagram_stories_downloader,
-            InstagramMediaType.HIGHLIGHT: self.instagram_downloader.instagram_highlight_downloader,
-            InstagramMediaType.PROFILE_PHOTO: self.instagram_downloader.instagram_profil_photo_downloader,
-        }
 
-        if media_type not in downloader_map:
-            await self.message.answer(self._("Invalid media type"))
+        if media_type == InstagramMediaType.REELS:
+            file_path, errors = await self.instagram_downloader.instagram_reels_downloader(url)
+        elif media_type == InstagramMediaType.POST:
+            file_path, errors = await self.instagram_downloader.instagram_post_downloader(url)
+        elif media_type == InstagramMediaType.PROFILE_PHOTO:
+            file_path, errors = await self.instagram_downloader.instagram_profil_photo_downloader(url)
+        elif media_type == InstagramMediaType.HIGHLIGHT:
+            await self.instagram_downloader.login(False)
+            file_path, errors = await self.instagram_downloader.instagram_highlight_downloader(url)
+        elif media_type == InstagramMediaType.STORIES:
+            await self.instagram_downloader.login(False)
+            file_path, errors = await self.instagram_downloader.instagram_stories_downloader(url)
+
+
+        if DownloadError.LOGIN_REQUIRED in errors and media_type in [
+            InstagramMediaType.STORIES,
+            InstagramMediaType.HIGHLIGHT
+        ]:
+            if media_type == InstagramMediaType.STORIES:
+                await self.instagram_downloader.login(re_login=True)
+                file_path, errors = await self.instagram_downloader.instagram_stories_downloader(url)
+            else:
+                await self.instagram_downloader.login(re_login=True)
+                file_path, errors = await self.instagram_downloader.instagram_highlight_downloader(url)
+        if DownloadError.FILE_TOO_BIG in errors:
+            if self.message:
+                await self.message.answer(self._("File size bigger than 2GB"))
             return None
 
-        try:
-            file_path, error_list = await downloader_map[media_type](url)
-
-            if not file_path and DownloadError.DOWNLOAD_ERROR in error_list:
-                await self.instagram_downloader.login(True)
-                file_path, error_list = await downloader_map[media_type](url)
-
-        except Exception as e:
-            print(f"❌ Unexpected error: {e}")
-            error_list = [DownloadError.DOWNLOAD_ERROR]
-
-        errors.extend(error_list)
-
-        if DownloadError.FILE_TOO_BIG in errors:
-            await self.message.answer(self._("File size bigger than 2GB"))
-        elif DownloadError.DOWNLOAD_ERROR in errors:
-            await self.message.answer(self._("Error while downloading file"))
-
+        if not file_path or DownloadError.DOWNLOAD_ERROR in errors:
+            if self.message:
+                await self.message.answer(self._("Error in loading file"))
+            return None
         return file_path
+
+
+
     async def youtube_downloaders(self, url: str):
         file_path, errors = await asyncio.to_thread(self.youtube_downloader.youtube_video_and_shorts_downloader, url)
 

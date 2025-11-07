@@ -50,11 +50,11 @@ async def main():
 
     register_middleware(dp, settings, pool)
 
-    session = AiohttpSession(api=TelegramAPIServer.from_base(settings.tg_api_server_url))
+    #session = AiohttpSession(api=TelegramAPIServer.from_base(settings.tg_api_server_url))
 
-    bot = Bot(token=settings.bot_token, session=session, default=DefaultBotProperties(parse_mode="HTML"))
+    bot = Bot(token=settings.bot_token)#, session=session, default=DefaultBotProperties(parse_mode="HTML"))
 
-    asyncio.create_task(daily_database_sender(bot, settings.admins_ids, settings.db_name))
+    asyncio.create_task(daily_database_sender(bot, settings.admins_ids, pool))
     asyncio.create_task(requirements_updater())
 
     await bot_commands(bot, settings)

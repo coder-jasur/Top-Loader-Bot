@@ -6,3 +6,4 @@ class DownloadError(Enum):
     DOWNLOAD_ERROR = "error_in_downloading"
     MUSIC_NOT_FOUND = "music_not_found"
     INVALID_MEDIA_TYPE = "invalid_media_type"
+    LOGIN_REQUIRED = "login_required"

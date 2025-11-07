@@ -26,7 +26,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-logs/file/all.log
 
 # Installer logs
 pip-log.txt
@@ -61,8 +60,4 @@ venv.bak/
 # Pyre type checker
 .pyre/
 .idea/*
-.vscode
 .env
-*.log
-
-session.json

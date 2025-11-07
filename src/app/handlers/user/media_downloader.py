@@ -451,7 +451,6 @@ async def all_downloader_(message: Message, lang: str):
                 media_type = MediaType.AUDIO
             elif message.voice:
                 media_type = MediaType.VOICE
-                print("voice")
 
             if media_type:
                 music_list, music_title, thumbnail_path = await downloader.music_downloaders(

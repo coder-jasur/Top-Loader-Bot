@@ -1,1 +1,9 @@
+.idea
+.env.dist
 .venv
+env
+tgbot/models/tests/users.db
+tgbot/models/tests/channals.db
+users_list.txt
+__pycache__
+pgdata

@@ -104,6 +104,8 @@ class AllDownloader:
             media_type: MediaType = None,
             some_data: str = None
     ):
+        print(actions)
+        print(media_type)
 
         media_file_id = None
         media_path = None
@@ -151,7 +153,10 @@ class AllDownloader:
                 return music_output_path, title
 
             if actions == MusicAction.SEARCH_BY_MEDIA:
+                print(111)
+                print(222)
                 if media_type == MediaType.VIDEO:
+                    print("video")
                     media_file_id = self.message.video.file_id
                 elif media_type == MediaType.VIDEO_NOTE:
                     media_file_id = self.message.video_note.file_id
@@ -163,6 +168,7 @@ class AllDownloader:
                 file_info = await self.message.bot.get_file(media_file_id)
                 file_path = file_info.file_path
                 if media_type == MediaType.VIDEO:
+                    print("video file")
                     media_path = f"./media/videos/{get_video_file_name()}"
                 elif media_type == MediaType.VIDEO_NOTE:
                     media_path = f"./media/videos/{get_video_file_name()}"
@@ -174,6 +180,7 @@ class AllDownloader:
                 await self.message.bot.download_file(file_path, media_path)
 
                 if media_type in [MediaType.VOICE, MediaType.VIDEO_NOTE]:
+                    print("xato")
                     audio_path = None
                     if MediaType.VIDEO_NOTE:
                         audio_path = f"./media/audios/{get_audio_file_name()}"
@@ -222,6 +229,8 @@ class AllDownloader:
 
 
                 music_name = await self.music_downloader.find_song_name_by_video_audio_voice_video_note(media_path)
+                print(music_name)
+                print("musicname")
 
 
 
@@ -265,6 +274,7 @@ class AllDownloader:
 
         except Exception as e:
             print("ERROR", e)
+            return None, None, None
 
     async def extract_video_to_audio(self, video_path: str):
         audio_path_file = f"./media/audios/{get_audio_file_name()}.mp3"

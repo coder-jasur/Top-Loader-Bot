@@ -441,10 +441,9 @@ async def all_downloader_(message: Message, lang: str):
 
         elif message.video or message.video_note or message.audio or message.voice:
             load_msg = await message.answer(_("Music is loading"))
-            print("Sarangi Media Type yash")
+
             media_type = None
             if message.video:
-                print(111111111111111111111111111111111111111111111111111111111111111)
                 media_type = MediaType.VIDEO
             elif message.video_note:
                 media_type = MediaType.VIDEO_NOTE
@@ -453,10 +452,8 @@ async def all_downloader_(message: Message, lang: str):
             elif message.voice:
                 media_type = MediaType.VOICE
 
-            print(media_type)
 
             if media_type:
-                print(122112211221112211221122112221122)
                 music_list, music_title, thumbnail_path = await downloader.music_downloaders(
                     MusicAction.SEARCH_BY_MEDIA,
                     media_type=media_type

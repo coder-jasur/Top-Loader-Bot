@@ -2,6 +2,8 @@ import asyncio
 import os.path
 from typing import Optional, Union
 
+import aiofiles
+import aiohttp
 from aiogram.types import Message
 
 from src.app.services.media_downloaders.audio_and_music_downloaders.music_downloader import MusicDownloader
@@ -104,8 +106,6 @@ class AllDownloader:
             media_type: MediaType = None,
             some_data: str = None
     ):
-        print(actions)
-        print(media_type)
 
         media_file_id = None
         media_path = None
@@ -153,10 +153,7 @@ class AllDownloader:
                 return music_output_path, title
 
             if actions == MusicAction.SEARCH_BY_MEDIA:
-                print(111)
-                print(222)
                 if media_type == MediaType.VIDEO:
-                    print("video")
                     media_file_id = self.message.video.file_id
                 elif media_type == MediaType.VIDEO_NOTE:
                     media_file_id = self.message.video_note.file_id
@@ -166,9 +163,7 @@ class AllDownloader:
                     media_file_id = self.message.voice.file_id
 
                 file_info = await self.message.bot.get_file(media_file_id)
-                file_path = file_info.file_path
                 if media_type == MediaType.VIDEO:
-                    print("video file")
                     media_path = f"./media/videos/{get_video_file_name()}"
                 elif media_type == MediaType.VIDEO_NOTE:
                     media_path = f"./media/videos/{get_video_file_name()}"
@@ -177,10 +172,19 @@ class AllDownloader:
                 elif media_type == MediaType.VOICE:
                     media_path = f"./media/audios/{get_audio_file_name()}"
 
-                await self.message.bot.download_file(file_path, media_path)
+                async with aiohttp.ClientSession() as session:
+                    url = f"https://api.telegram.org/bot{self.message.bot.token}/getFile?file_id={file_info.file_id}"
+                    async with session.get(url) as resp:
+                        file_info = await resp.json()
+                        file_path = file_info['result']['file_path']
+
+                    file_url = f"https://api.telegram.org/file/bot{self.message.bot.token}/{file_path}"
+                    async with session.get(file_url) as response:
+                        if response.status == 200:
+                            async with aiofiles.open(media_path, "wb") as f:
+                                await f.write(await response.read())
 
                 if media_type in [MediaType.VOICE, MediaType.VIDEO_NOTE]:
-                    print("xato")
                     audio_path = None
                     if MediaType.VIDEO_NOTE:
                         audio_path = f"./media/audios/{get_audio_file_name()}"

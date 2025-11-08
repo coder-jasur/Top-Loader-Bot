@@ -30,7 +30,9 @@ async def take_media_effect(call: CallbackQuery, callback_data: MediaEffectsCD, 
         await state.set_state(SendMediaSG.send_media)
         await call.message.edit_text(_("Send media"))
     else:
+        print(1111111111111111111111111111111)
         load_msg = await call.message.answer(_("Is being processed"))
+        print(1111111111111111111111111111111)
         media_effect = MediaEffects(message=call.message, bot=bot)
         out_put_media_path = None
 
@@ -62,10 +64,15 @@ async def take_media_effect(call: CallbackQuery, callback_data: MediaEffectsCD, 
                 await call.message.answer(_("Media type not found"))
                 return
 
+            print(f"{media_effect} 11111111111111111111111111")
+            print(f"{meida_type} 11111111111111111111111111")
+
             out_put_media_path = await media_effect.media_effect(
                 effect_type=general_effect_type,
                 media_type=meida_type,
             )
+            print(f"{out_put_media_path} 22222222222222222222222222222222222222")
+            print(f"{out_put_media_path} 2222222222222222222222222222222222")
 
             if not out_put_media_path or not await asyncio.to_thread(os.path.exists, out_put_media_path):
                 await call.message.answer(_("Error in processed media"))

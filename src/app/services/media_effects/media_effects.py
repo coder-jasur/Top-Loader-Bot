@@ -25,6 +25,8 @@ class MediaEffects:
     ) -> str | None:
         out_put_media_path = None
         media_input_path = None
+        print(f"{effect_type} 22222222222222222221111111111111")
+        print(f"{media_type} 22222222222222222222222111111111111111")
 
         try:
             if media_type == MediaType.VIDEO:
@@ -50,6 +52,9 @@ class MediaEffects:
                     if response.status == 200:
                         async with aiofiles.open(media_input_path, "wb") as f:
                             await f.write(await response.read())
+
+            print(f"{effect_type} 22222222222222222221111111111111")
+            print(f"{media_type} 22222222222222222222222111111111111111")
 
             if media_type in [MediaType.AUDIO, MediaType.VOICE]:
                 out_put_media_path = await self.media_effect_obj.audio_effects(media_input_path, effect_type)

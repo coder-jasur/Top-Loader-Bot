@@ -81,7 +81,7 @@ class AllDownloader:
 
 
     async def youtube_downloaders(self, url: str):
-        file_path, errors = await asyncio.to_thread(self.youtube_downloader.youtube_video_and_shorts_downloader, url)
+        file_path, errors = await self.youtube_downloader.youtube_video_and_shorts_downloader(url)
 
         if DownloadError.FILE_TOO_BIG in errors:
             await self.message.answer(self._("File size big to 2 gb"))

@@ -41,7 +41,7 @@ class AudioUtils:
     def speech_to_text(self, file_path: str, language: str = "uz") -> str:
         file_waw = None
         try:
-            model = WhisperModel("small", device="cpu", compute_type="int8")
+            model = WhisperModel("base", device="cpu", compute_type="int8")
 
             if not file_path.endswith(".wav"):
                 file_waw = self.convert_audio(file_path)

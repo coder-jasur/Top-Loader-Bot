@@ -12,6 +12,5 @@ class Settings:
     db_password = env.str("POSTGRES_PASSWORD")
     db_host = env.str("POSTGRES_HOST")
     db_port = env.str("POSTGRES_PORT")
-    instagram_username = env.str("INSTAGRAM_USERNAME")
-    instagram_password = env.str("INSTAGRAM_PASSWORD")
+
     tg_api_server_url = env.str("TG_API_SERVER_URL", default="https://api.telegram.org")

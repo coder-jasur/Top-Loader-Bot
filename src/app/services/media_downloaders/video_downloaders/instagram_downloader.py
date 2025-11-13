@@ -14,6 +14,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from yt_dlp import YoutubeDL
 
+from src.app.core.config import Settings
 from src.app.services.media_downloaders.utils.files import get_video_file_name, get_photo_file_name
 from src.app.utils.enums.error import DownloadError
 
@@ -25,7 +26,7 @@ class InstagramDownloader:
     def __init__(self):
         self.timeout = 120
         self.download_path = Path("media")
-        self.selenium_url = os.getenv('SELENIUM_REMOTE_URL', 'http://selenium:4444')
+        self.settings = Settings()
 
     async def instagram_reels_downloader(
             self,
@@ -99,10 +100,10 @@ class InstagramDownloader:
         # REMOTE Selenium Grid ga ulanish
         try:
             driver = webdriver.Remote(
-                command_executor=self.selenium_url,
+                command_executor=self.settings.selenium_url,
                 options=chrome_options
             )
-            print(f"✅ Remote Selenium ga ulandi: {self.selenium_url}")
+            print(f"✅ Remote Selenium ga ulandi: {self.settings.selenium_url}")
             return driver
         except Exception as e:
             print(f"❌ Remote Selenium ga ulanishda xato: {e}")
@@ -114,20 +115,12 @@ class InstagramDownloader:
         urls = []
 
         try:
-            print("🌐 Selenium Grid ga ulanish...")
             driver = self.setup_driver()
 
-            print("🌐 Sayt ochilmoqda...")
             driver.get("https://sssinstagram.com/ru")
 
-            # Sahifa to'liq yuklanishini kutish
-
-            print("📝 URL kiritilmoqda...")
-
-            # JavaScript orqali input topish va yozish (eng ishonchli)
             wait = WebDriverWait(driver, 10)
 
-            # Input field ni kutish
             input_field = wait.until(
                 EC.presence_of_element_located((By.CSS_SELECTOR, "input.form__input"))
             )
@@ -142,10 +135,7 @@ class InstagramDownloader:
                 }}
             """)
 
-            print("✅ URL kiritildi")
             time.sleep(1)
-
-            print("🔽 Yuklash tugmasini bosish...")
 
             # Submit button ni topish va bosish
             download_button = wait.until(
@@ -154,11 +144,9 @@ class InstagramDownloader:
 
             # JavaScript orqali click
             driver.execute_script("arguments[0].click();", download_button)
-            print("✅ Tugma bosildi")
 
             time.sleep(5)
 
-            print("⏳ Media yuklanishi kutilmoqda...")
             previous_count = 0
             no_change_count = 0
 
@@ -168,7 +156,7 @@ class InstagramDownloader:
                     current_count = len(download_buttons)
 
                     if current_count > previous_count:
-                        print(f"   📥 {current_count} ta media topildi...")
+                        print(f"📥 {current_count} Media found")
                         previous_count = current_count
                         no_change_count = 0
                     elif current_count > 0:
@@ -216,7 +204,7 @@ class InstagramDownloader:
         finally:
             if driver:
                 driver.quit()
-                print("\n🔒 Brauzer yopildi")
+                print("\n🔒 Brouser cloused")
 
     async def instagram_profil_photo_downloader(
             self,

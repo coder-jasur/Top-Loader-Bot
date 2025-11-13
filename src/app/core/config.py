@@ -13,4 +13,6 @@ class Settings:
     db_host = env.str("POSTGRES_HOST")
     db_port = env.str("POSTGRES_PORT")
 
+    selenium_url = env.str("SELENIUM_REMOTE_URL")
+
     tg_api_server_url = env.str("TG_API_SERVER_URL", default="https://api.telegram.org")

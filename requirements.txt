@@ -8,6 +8,7 @@ aiohttp
 aiofiles
 requests
 yt_dlp
+instaloader
 shazamio
 pedalboard
 babel

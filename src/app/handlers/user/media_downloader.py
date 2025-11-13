@@ -1,6 +1,7 @@
 import asyncio
 import os
 from pathlib import Path
+from pprint import pprint
 from typing import List
 
 import aiofiles
@@ -226,37 +227,18 @@ async def cleanup_post_paths(post_paths):
 
     for post in post_paths:
         if isinstance(post, dict):
-            path = post.get("media_path")
-            if isinstance(path, str):
-                await cleanup_files(path)
-            elif isinstance(path, list):
-                await cleanup_files(*path)
+            media_path = post.get("media_path")
+            if isinstance(media_path, str):
+                await cleanup_files(media_path)
+
         elif isinstance(post, list):
-            await cleanup_files(*post)
+            for item in post:
+                if not isinstance(item, dict):
+                    continue
 
-
-def create_media_group(media_list: List[str], caption: str = None) -> List:
-    """Media guruhini yaratish"""
-    media_group = []
-
-    for i, post in enumerate(media_list):
-        if not post:
-            continue
-        if not Path(post).exists():
-            continue
-
-        media_caption = caption if i == 0 else None
-        ext = os.path.splitext(post)[1].lower()
-
-        try:
-            if ext in [".jpg", ".jpeg", ".png", ".webp"]:
-                media_group.append(InputMediaPhoto(media=FSInputFile(post), caption=media_caption))
-            elif ext in [".mp4", ".mov", ".mkv"]:
-                media_group.append(InputMediaVideo(media=FSInputFile(post), caption=media_caption))
-        except Exception as e:
-            print(f"ERROR: {e}")
-
-    return media_group
+                media_path = item.get("media_path")
+                if isinstance(media_path, str):
+                    await cleanup_files(media_path)
 
 
 @media_downloader_router.message(F.text | F.video | F.video_note | F.voice | F.audio)
@@ -269,6 +251,7 @@ async def all_downloader_(message: Message, lang: str):
             return
 
     video_path = None
+    post_paths = None
     photo_path = None
     thumbnail_path = None
     highlights_path = None
@@ -289,15 +272,17 @@ async def all_downloader_(message: Message, lang: str):
                         )
 
                         if urls:
-                            if ".jpeg" in str(urls):
-                                for url in urls:
+                            for media in urls:
+                                url = media.get("url")
+                                media_type = media.get("type")
+
+                                if media_type == "photo":
                                     await message.reply_photo(
                                         url,
                                         caption=_("Downloaded by")
                                     )
 
-                            elif ".mp4" in str(urls):
-                                for url in urls:
+                                elif media_type == "video":
                                     await message.reply_video(
                                         url,
                                         reply_markup=video_keyboards(lang),
@@ -309,55 +294,78 @@ async def all_downloader_(message: Message, lang: str):
                         urls = await downloader.instagram_downloaders(
                             message.text, InstagramMediaType.STORIES
                         )
+
                         if urls:
-                            if ".jpeg" in str(urls):
-                                for url in urls:
+                            for media in urls:
+                                url = media.get("url")
+                                media_type = media.get("type")
+
+                                if media_type == "photo":
                                     await message.reply_photo(
                                         url,
                                         caption=_("Downloaded by")
                                     )
 
-
-                            elif ".mp4" in str(urls):
-                                for url in urls:
+                                elif media_type == "video":
                                     await message.reply_video(
                                         url,
                                         reply_markup=video_keyboards(lang),
                                         caption=_("Downloaded by")
                                     )
 
-
                     elif info.url_type == URLType.INSTAGRAM_POST:
                         load_msg = await message.answer(_("Post is loading"))
-                        urls = await downloader.instagram_downloaders(
+                        post_paths = await downloader.instagram_downloaders(
                             message.text, InstagramMediaType.POST
                         )
-                        if not urls:
+
+                        if not post_paths:
+                            await load_msg.edit_text(_("Failed to download post."))
                             return
-                        skipped = []
-                        for url in urls:
-                            if not url:
+
+                        for post in post_paths:
+                            if not post:
                                 continue
-                            media_type = MediaType.VIDEO if "mp4" in url else MediaType.PHOTO
-                            if media_type == MediaType.PHOTO:
-                                try:
-                                    caption = _("Downloaded by")
-                                    await message.reply_photo(
-                                        url,
-                                        caption=caption
-                                    )
-                                except Exception as e:
-                                    print(f"ERROR: {e}")
-                                    skipped.append(url)
-                            elif media_type == MediaType.VIDEO:
-                                try:
+
+                            if isinstance(post, list):
+                                for media in post:
+                                    media_path = media.get("media_path")
+                                    media_type = media.get("type")
+                                    if not media_path or not await asyncio.to_thread(os.path.exists, media_path):
+                                        continue
+
+                                    if media_type == "video":
+                                        await message.reply_video(
+                                            video=FSInputFile(media_path),
+                                            caption=_("Downloaded by"),
+                                            reply_markup=video_keyboards(lang)
+                                        )
+
+                                    elif media_type == "photo":
+                                        await message.reply_photo(
+                                            photo=FSInputFile(media_path),
+                                            caption=_("Downloaded by")
+                                        )
+
+                            elif isinstance(post, dict):
+                                media_path = post.get("media_path")
+                                media_type = post.get("type")
+
+                                if not media_path or not await asyncio.to_thread(os.path.exists, media_path):
+                                    continue
+
+                                if media_type == "video":
                                     await message.reply_video(
-                                        url,
+                                        video=FSInputFile(media_path),
+                                        caption=_("Downloaded by"),
                                         reply_markup=video_keyboards(lang)
                                     )
-                                except Exception as e:
-                                    print(f"ERROR: {e}")
-                                    skipped.append(url)
+
+                                elif media_type == "photo":
+                                    await message.reply_photo(
+                                        photo=FSInputFile(media_path),
+                                        caption=_("Downloaded by")
+                                    )
 
                     elif info.url_type in [
                         URLType.INSTAGRAM_REEL,
@@ -506,6 +514,9 @@ async def all_downloader_(message: Message, lang: str):
 
         if highlights_path:
             await cleanup_files(highlights_path)
+
+        if post_paths:
+            await cleanup_post_paths(post_paths)
 
 
 @media_downloader_router.callback_query(SearchMusicInVideoCD.filter())

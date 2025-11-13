@@ -43,13 +43,14 @@ class AllDownloader:
         file_path = None
 
         parsing_types = [
-            InstagramMediaType.POST,
             InstagramMediaType.HIGHLIGHT,
             InstagramMediaType.STORIES
         ]
 
         if media_type in parsing_types:
-            file_path = await asyncio.to_thread(self.instagram_downloader.get_downloaded_urls, url)
+            file_path = await asyncio.to_thread(self.instagram_downloader.get_instagram_links, url)
+        if media_type == InstagramMediaType.POST:
+            file_path = await self.instagram_downloader.instagram_post_downloader(url)
         elif media_type == InstagramMediaType.REELS:
             file_path, errors = await self.instagram_downloader.instagram_reels_downloader(url)
         elif media_type == InstagramMediaType.PROFILE_PHOTO:
@@ -68,7 +69,6 @@ class AllDownloader:
 
     async def youtube_downloaders(self, url: str):
         file_path, errors = await self.youtube_downloader.youtube_video_and_shorts_downloader(url)
-        print(file_path)
 
         if DownloadError.FILE_TOO_BIG in errors:
             await self.message.answer(self._("File size big to 2 gb"))
